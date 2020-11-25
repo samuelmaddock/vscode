@@ -12,6 +12,7 @@ import { ExtensionIdentifier, IExtension, ExtensionType, IExtensionDescription }
 import { getGalleryExtensionId } from 'vs/platform/extensionManagement/common/extensionManagementUtil';
 import { IMessagePassingProtocol } from 'vs/base/parts/ipc/common/ipc';
 import { ExtensionActivationReason } from 'vs/workbench/api/common/extHostExtensionActivator';
+import { IURLHandler } from 'vs/platform/url/common/url';
 
 export const nullExtensionDescription = Object.freeze(<IExtensionDescription>{
 	identifier: new ExtensionIdentifier('nullExtensionDescription'),
@@ -317,4 +318,12 @@ export class NullExtensionService implements IExtensionService {
 	_onDidActivateExtension(_extensionId: ExtensionIdentifier, _codeLoadingTime: number, _activateCallTime: number, _activateResolvedTime: number, _activationReason: ExtensionActivationReason): void { }
 	_onExtensionRuntimeError(_extensionId: ExtensionIdentifier, _err: Error): void { }
 	_onExtensionHostExit(code: number): void { }
+}
+
+export const IExtensionUrlHandler = createDecorator<IExtensionUrlHandler>('extensionUrlHandler');
+
+export interface IExtensionUrlHandler {
+	readonly _serviceBrand: undefined;
+	registerExtensionHandler(extensionId: ExtensionIdentifier, handler: IURLHandler): void;
+	unregisterExtensionHandler(extensionId: ExtensionIdentifier): void;
 }

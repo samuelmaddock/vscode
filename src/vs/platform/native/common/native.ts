@@ -151,4 +151,7 @@ export interface ICommonNativeHostService {
 	deletePassword(service: string, account: string): Promise<boolean>;
 	findPassword(service: string): Promise<string | null>;
 	findCredentials(service: string): Promise<Array<{ account: string, password: string }>>
+
+	// Extension URLs
+	isExtensionUrlTrusted(uri: URI): Promise<boolean>;
 }

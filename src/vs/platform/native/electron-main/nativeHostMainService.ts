@@ -28,6 +28,8 @@ import { dirname, join } from 'vs/base/common/path';
 import product from 'vs/platform/product/common/product';
 import { memoize } from 'vs/base/common/decorators';
 import { Disposable } from 'vs/base/common/lifecycle';
+import * as crypto from 'crypto';
+import * as qs from 'querystring';
 
 export interface INativeHostMainService extends AddFirstParameterToFunctions<ICommonNativeHostService, Promise<unknown> /* only methods, not events */, number | undefined /* window ID */> { }
 
@@ -727,6 +729,80 @@ export class NativeHostMainService extends Disposable implements INativeHostMain
 		const keytar = await import('keytar');
 
 		return keytar.findCredentials(service);
+	}
+
+	//#endregion
+
+	//#region Extension URLs
+
+	private trustedExtensionUrlPublicKeys = new Map<string, (crypto.KeyObject | string | null)[]>();
+
+	async isExtensionUrlTrusted(windowId: number | undefined, uri: URI): Promise<boolean> {
+		if (!product.trustedExtensionUrlPublicKeys) {
+			return false;
+		}
+
+		const { timestamp: rawTimestamp, sign } = qs.parse(uri.query);
+
+		if (!rawTimestamp || typeof rawTimestamp !== 'string') {
+			return false;
+		}
+
+		const now = Date.now();
+		const timestamp = Number.parseInt(rawTimestamp);
+		const diff = now - timestamp;
+
+		if (diff < 0 || diff > 600_000) { // 10 minutes
+			return false;
+		}
+
+		if (!sign || typeof sign !== 'string') {
+			return false;
+		}
+
+		const unsignedQuery = uri.query.replace(/(&|\?)sign=[^&]+(&?)/, (_1, prefix, suffix) => prefix === '?' ? '?' : suffix);
+		const unsignedUri = URI.from({ ...uri, query: unsignedQuery });
+		const verify = crypto.createVerify('SHA256');
+		verify.write(unsignedUri);
+		verify.end();
+
+		const extensionId = uri.authority;
+
+		let keys = this.trustedExtensionUrlPublicKeys.get(extensionId);
+
+		if (!keys) {
+			keys = product.trustedExtensionUrlPublicKeys[extensionId];
+
+			if (!keys) {
+				return false;
+			}
+
+			this.trustedExtensionUrlPublicKeys.set(extensionId, [...keys]);
+		}
+
+		for (let i = 0; i < keys.length; i++) {
+			let key = keys[i];
+
+			if (key === null) { // failed to be parsed before
+				continue;
+			} else if (typeof key === 'string') { // needs to be parsed
+				try {
+					key = crypto.createPublicKey({ key: Buffer.from(key, 'base64'), format: 'der', type: 'spki' });
+
+					keys[i] = key;
+				} catch (err) {
+					this.logService.warn(`Failed to parse trusted extension uri public key #${i + 1} for ${extensionId}:`, err);
+					keys[i] = null;
+					continue;
+				}
+			}
+
+			if (verify.verify(key, sign, 'base64')) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	//#endregion
