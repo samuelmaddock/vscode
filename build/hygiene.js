@@ -167,12 +167,12 @@ function hygiene(some) {
 	let errorCount = 0;
 
 	const productJson = es.through(function (file) {
-		const product = JSON.parse(file.contents.toString('utf8'));
+		// const product = JSON.parse(file.contents.toString('utf8'));
 
-		if (product.extensionsGallery) {
-			console.error(`product.json: Contains 'extensionsGallery'`);
-			errorCount++;
-		}
+		// if (product.extensionsGallery) {
+		// 	console.error(`product.json: Contains 'extensionsGallery'`);
+		// 	errorCount++;
+		// }
 
 		this.emit('data', file);
 	});
