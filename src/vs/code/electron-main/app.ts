@@ -178,6 +178,11 @@ export class CodeApplication extends Disposable {
 			contents.on('will-attach-webview', (event, webPreferences, params) => {
 
 				const isValidWebviewSource = (source: string | undefined): boolean => {
+					// EDIT: allow any source so we can build a browser!
+					if (1) {
+						return true;
+					}
+
 					if (!source) {
 						return false;
 					}
@@ -211,15 +216,17 @@ export class CodeApplication extends Disposable {
 				event.preventDefault();
 			});
 
-			contents.on('will-navigate', event => {
-				this.logService.error('webContents#will-navigate: Prevented webcontent navigation');
+			// EDIT: browser
+			// contents.on('will-navigate', event => {
+			// 	this.logService.error('webContents#will-navigate: Prevented webcontent navigation');
 
-				event.preventDefault();
-			});
+			// 	event.preventDefault();
+			// });
 
 			contents.on('new-window', (event, url) => {
 				event.preventDefault(); // prevent code that wants to open links
 
+				// TODO: open in new panel
 				this.nativeHostMainService?.openExternal(undefined, url);
 			});
 
